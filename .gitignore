@@ -1,0 +1,4 @@
+build/
+.ediconfig*
+CMakeUserPresets.json
+.vscode/
