@@ -2,6 +2,7 @@
 spdlog/1.12.0
 catch2/3.4.0
 fmt/10.0.0
+asio/1.28.1
 
 [generators]
 CMakeDeps
