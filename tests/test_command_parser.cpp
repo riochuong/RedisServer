@@ -7,9 +7,6 @@
 using namespace std::string_literals;
 using namespace RedisServer::RespProtocol;
 
-
-
-
 static std::string GenerateTestString(size_t num_commands, 
                                       size_t max_command_size, 
                                       std::vector<std::string>& expected_subcmds) {

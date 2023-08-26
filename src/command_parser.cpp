@@ -1,23 +1,9 @@
 #include "resp_protocol/command_parser.h"
 #include "resp_protocol/resp_consts.h"
+#include "parsing_utils.h"
 
 using namespace RedisServer;
 
-static bool ToSizeTFromStr(const std::string& str, size_t* val){
-    try{
-        if (!val){
-            throw std::runtime_error("val must be a valid pointer that store convert value");
-        }        
-        *val = std::stol(str);
-    } catch(std::invalid_argument const& ex){
-        logger::error("Failed to convert to size_t. raw str {}. Ex {}", str, ex.what());
-        return false;
-    } catch (std::out_of_range const& ex) {
-        logger::error("Input out of range size_t. raw str {}. Ex {}", str, ex.what());
-        return false; 
-    }
-    return true;
-}
 
 static bool NextTokenStart(const std::string& str, size_t start, size_t* token_start) {
     size_t r_size_break_idx = str.find('\r', start);
@@ -60,8 +46,11 @@ std::vector<std::string> RespProtocol::CommandParser::Parse(const std::string& r
     
     if (raw_commands.size() < min_command_size){
         err = ParserError::kInvalidFormat;
-        logger::error("CommandParser Error: {}. Command size is less than min required {}", 
-                RespProtocol::gParseErrorStringMap.at(err), min_command_size);
+        logger::error("CommandParser Error: {}. Command size is less than min required {} Raw Commands {} Size {}", 
+                RespProtocol::gParseErrorStringMap.at(err), 
+                min_command_size, 
+                raw_commands, 
+                raw_commands.size());
         return commands;
     }
 
