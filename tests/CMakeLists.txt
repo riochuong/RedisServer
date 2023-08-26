@@ -40,7 +40,7 @@ target_link_libraries(test_command_parser
 target_link_libraries(test_server 
         "${Catch2_INCLUDE_DIRS}/../lib/libCatch2Main.a"
         "${Catch2_INCLUDE_DIRS}/../lib/libCatch2.a"
-        parsing_utils
+        utils
         command_parser
         spdlog::spdlog
         asio::asio

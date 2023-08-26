@@ -11,7 +11,7 @@ include_directories("${asio_INCLUDE_DIRS}")
 set(SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/command_parser.cpp")
 
 add_library(command_parser "${CMAKE_CURRENT_SOURCE_DIR}/command_parser.cpp")
-add_library(parsing_utils "${CMAKE_CURRENT_SOURCE_DIR}/parsing_utils.cpp")
+add_library(utils "${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp")
 add_executable(redis_server "${CMAKE_CURRENT_SOURCE_DIR}/server.cpp")
 
 target_compile_features(command_parser
@@ -24,18 +24,18 @@ target_include_directories(command_parser
     "${CMAKE_CURRENT_SOURCE_DIR}/../inc"
 )
 
-target_include_directories(parsing_utils
+target_include_directories(utils
     PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/../inc"
 )
 
 target_link_libraries(command_parser
     spdlog::spdlog
-    parsing_utils
+    utils
     "${fmt_INCLUDE_DIRS_RELEASE}/../lib/libfmt.a"
 )
 
-target_link_libraries(parsing_utils
+target_link_libraries(utils
     spdlog::spdlog
     "${fmt_INCLUDE_DIRS_RELEASE}/../lib/libfmt.a"
 )
@@ -43,7 +43,7 @@ target_link_libraries(parsing_utils
 target_link_libraries(redis_server
     spdlog::spdlog
     command_parser
-    parsing_utils
+    utils
     asio::asio
     "${fmt_INCLUDE_DIRS_RELEASE}/../lib/libfmt.a"
 )

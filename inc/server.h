@@ -9,7 +9,7 @@
 
 #include "logging.h"
 #include "resp_protocol/command_parser.h"
-#include "parsing_utils.h"
+#include "utils.h"
 
 using asio::ip::tcp;
 using namespace std::string_literals;
@@ -41,6 +41,7 @@ namespace RedisServer{
             const DynamicBuffer_v2 &buffers,
             asio::error_code &ec)
         {
+         
             return asio::write(s, buffers, ec);
         }
     };
@@ -68,7 +69,8 @@ namespace RedisServer{
     template<typename TCPSocket, typename AsyncLib>
     class Connection {
         public:
-            Connection(asio::thread_pool& exec): socket_(exec){}
+            Connection(asio::thread_pool& exec, size_t buff_size): socket_(exec){
+            }
            void HandleConnection(){
                 // read command from client
                 asio::error_code ec;
@@ -225,12 +227,13 @@ namespace RedisServer{
     class Server {
         public:
 
-            Server(uint16_t port, std::size_t num_thread_workers = 10, bool cont = true): port_(port),
+            Server(uint16_t port, std::size_t num_thread_workers = 10, bool cont = true, size_t buff_size = 1024): port_(port),
                                                                      num_thread_workers_(num_thread_workers), 
                                                                      ioc_(),
                                                                      acceptor_(ioc_, tcp::endpoint(tcp::v4(), port_)),
                                                                      pool_(num_thread_workers),
-                                                                     continuous_mode_(cont)
+                                                                     continuous_mode_(cont),
+                                                                     buff_size_(buff_size)
                                                                      {};
 
             /*! \brief Start server accepting client connection at initialized port port_ with threadpool workers
@@ -265,6 +268,7 @@ namespace RedisServer{
             asio::io_context ioc_;
             TCPAcceptor acceptor_;
             asio::thread_pool pool_;
+            size_t buff_size_;
             // support testing
             bool running_ {false};
             bool continuous_mode_;
@@ -288,7 +292,7 @@ namespace RedisServer{
             {
                 // initialize async server and wait for client commands
                 logger::info("Accepting new connection !");
-                auto conn = std::make_shared<Connection<TCPSocket, AsyncLib> >(this->pool_);
+                auto conn = std::make_shared<Connection<TCPSocket, AsyncLib> >(this->pool_, buff_size_);
                 acceptor_.async_accept(
                     conn->GetSocket(),
                     [conn, this](const asio::error_code &error)
