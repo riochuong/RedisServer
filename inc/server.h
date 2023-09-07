@@ -49,7 +49,9 @@ namespace RedisServer{
     enum ClientCommandType
     {
         C_PING = 0,
-        C_ECHO
+        C_ECHO,
+        C_SET,
+        C_GET
     };
 
     enum ServerError {
@@ -61,6 +63,8 @@ namespace RedisServer{
     static const std::unordered_map<std::string, ClientCommandType> gStringCmdToEnumCmd {
         {"PING", ClientCommandType::C_PING},
         {"ECHO", ClientCommandType::C_ECHO},
+        {"SET", ClientCommandType::C_SET},
+        {"GET", ClientCommandType::C_GET},
     };
 
     /*! \brief Represent each connection from client 
@@ -114,8 +118,8 @@ namespace RedisServer{
                     switch (gStringCmdToEnumCmd.at(commands[currIdx]))
                     {
                     case C_PING:
-                        HandlePingCommand();
                         currIdx++;
+                        HandlePingCommand();
                         break;
                     case C_ECHO:
                         currIdx++;
@@ -144,6 +148,7 @@ namespace RedisServer{
             asio::streambuf recv_;
             const std::string PONG_MSG {"*1\r\n$4\r\nPONG\r\n"s};
             asio::const_buffers_1 PONG_MSG_BUFFER = asio::buffer(PONG_MSG);
+            
             // ----- ALL command Handlers are here for now ----
             void HandlePingCommand(void){
                 logger::info("Handle Ping Command by sending back Pong message to client ");
@@ -153,6 +158,7 @@ namespace RedisServer{
                 assert(written_byte == PONG_MSG.size());
                 logger::info("Successfully send PONG message to client");
             }
+
             void HandleEchoCommand(std::string msg){
                 logger::info("Handle Echo Command with recv message {}", msg);
                 asio::error_code ec {};      
@@ -233,6 +239,7 @@ namespace RedisServer{
                                                                      acceptor_(ioc_, tcp::endpoint(tcp::v4(), port_)),
                                                                      pool_(num_thread_workers),
                                                                      continuous_mode_(cont),
+                                                                     strand_(pool_),
                                                                      buff_size_(buff_size)
                                                                      {};
 
@@ -268,10 +275,14 @@ namespace RedisServer{
             asio::io_context ioc_;
             TCPAcceptor acceptor_;
             asio::thread_pool pool_;
+            asio::strand strand_; // we need strand to serialize access to shared KV database
             size_t buff_size_;
             // support testing
             bool running_ {false};
             bool continuous_mode_;
+
+            // importing data structure for storing key-value data
+            
 
             void KeepServerRunning() {
                 asio::post(
@@ -304,7 +315,7 @@ namespace RedisServer{
                                 this->pool_,
                                 [conn]()
                                 {
-                                    logger::info("Handle Client Connection Async");
+                                    logger:info("Handle Client Connection Async");
                                     conn->HandleConnection();
                                     logger::info("Finished Handle Connection");
                                 }
