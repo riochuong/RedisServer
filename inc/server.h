@@ -239,7 +239,7 @@ namespace RedisServer{
                                                                      acceptor_(ioc_, tcp::endpoint(tcp::v4(), port_)),
                                                                      pool_(num_thread_workers),
                                                                      continuous_mode_(cont),
-                                                                     strand_(pool_),
+                                                                     strand_(pool_.get_executor()),
                                                                      buff_size_(buff_size)
                                                                      {};
 
@@ -275,7 +275,7 @@ namespace RedisServer{
             asio::io_context ioc_;
             TCPAcceptor acceptor_;
             asio::thread_pool pool_;
-            asio::strand strand_; // we need strand to serialize access to shared KV database
+            asio::strand<asio::thread_pool::executor_type> strand_; // we need strand to serialize access to shared KV database
             size_t buff_size_;
             // support testing
             bool running_ {false};
@@ -315,7 +315,7 @@ namespace RedisServer{
                                 this->pool_,
                                 [conn]()
                                 {
-                                    logger:info("Handle Client Connection Async");
+                                    logger::info("Handle Client Connection Async");
                                     conn->HandleConnection();
                                     logger::info("Finished Handle Connection");
                                 }

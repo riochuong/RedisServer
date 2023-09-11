@@ -12,11 +12,10 @@ include_directories("${fmt_INCLUDE_DIRS}")
 include_directories("${Catch2_INCLUDE_DIRS}")
 include_directories("${asio_INCLUDE_DIRS}")
 
-set(SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test_command_parser.cpp"
-)
 
-add_executable(test_command_parser ${SOURCES})
+add_executable(test_command_parser "${CMAKE_CURRENT_SOURCE_DIR}/test_command_parser.cpp")
 add_executable(test_server "${CMAKE_CURRENT_SOURCE_DIR}/test_server.cpp")
+add_executable(test_kv_db "${CMAKE_CURRENT_SOURCE_DIR}/test_kv_db.cpp")
 
 target_include_directories(test_server
     PUBLIC
@@ -46,6 +45,18 @@ target_link_libraries(test_server
         asio::asio
         "${fmt_INCLUDE_DIRS_RELEASE}/../lib/libfmt.a"
 )
+
+target_link_libraries(test_kv_db 
+        "${Catch2_INCLUDE_DIRS}/../lib/libCatch2Main.a"
+        "${Catch2_INCLUDE_DIRS}/../lib/libCatch2.a"
+        utils
+        kv_db
+        command_parser
+        spdlog::spdlog
+        asio::asio
+        "${fmt_INCLUDE_DIRS_RELEASE}/../lib/libfmt.a"
+)
+
 message("catch2 Libraries ${Catch2_LIBRARIES}")
 message("catch2 Libraries ${Catch2_INCLUDE_DIRS}")
 
