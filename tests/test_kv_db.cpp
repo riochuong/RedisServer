@@ -22,6 +22,11 @@ TEST_CASE("KV Test DB", "Set/Get Basic") {
         kv_db.Get(key, ret_val, ec);
         REQUIRE(ec == DatabseErrCode::Ok);
         REQUIRE(ret_val == value);
+        REQUIRE(kv_db.Exists(key));
+        // delete nonexistence key -- should return True
+        REQUIRE(kv_db.DeleteKey("notexistencebefore"));
+        REQUIRE(kv_db.DeleteKey(key));
+        REQUIRE(!kv_db.Exists(key));
     } 
 }
 

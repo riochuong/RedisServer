@@ -1,9 +1,22 @@
 #include <kv.h>
 #include <memory.h>
 #include <list>
+
 #include "logging.h"
 
 using namespace RedisServer;
+
+std::string RedisServer::ToStringType(ValueType& t){
+      switch (t)
+      {
+        case ValueType::STRING:
+          return "STRING";
+        case ValueType::LIST:
+          return "LIST";
+        default: 
+          throw std::runtime_error("Invalid ValueType");
+      }
+}
 
 
 
@@ -16,7 +29,8 @@ void KeyValueDatabase::Get(const std::string& key, std::string &value, DatabseEr
     }
     if (value_it->second->type != ValueType::STRING){
         ec = DatabseErrCode::InvalidValueType;
-        logger::error("Invalid value type for key {} Must be STRING but received {}", key, value_it->second->type);
+        logger::error("Invalid value type for key {} Must be STRING but received {}", key, 
+                                                            ToStringType(value_it->second->type));
         return;
     }
     ec = DatabseErrCode::Ok;
@@ -43,7 +57,13 @@ void KeyValueDatabase::Set(const std::string& key, const std::string& value, std
         this->db_[key] = std::make_shared<Value>();
         this->db_[key]->expired_at = expired_at;
         this->db_[key]->val = (void*)(new std::string(value));
+        this->db_[key]->type = ValueType::STRING;
     }
+}
+
+
+uint64_t KeyValueDatabase::GetNumberOfKeys(void){
+    return this->db_.size();
 }
 
 
@@ -62,7 +82,21 @@ std::vector<std::string> KeyValueDatabase::RRange(const std::string& key, const 
 }
 
 
-bool KeyValueDatabase::Exists(const std::string& key, DatabseErrCode& ec){
-    ec = DatabseErrCode::Ok;
+bool KeyValueDatabase::Exists(const std::string& key){
     return db_.find(key) != db_.end();
+}
+
+bool KeyValueDatabase::DeleteKey(const std::string& key){
+    if (db_.find(key) != db_.end()){
+        auto val = db_.at(key);
+        if (val->type == ValueType::LIST) {
+            std::list<std::string>* list_ptr = static_cast<std::list<std::string>*>(val->val);
+            delete(list_ptr); 
+        } else {
+            std::string* str_ptr = static_cast<std::string*>(val->val);
+            delete(str_ptr); 
+        }
+        db_.erase(key);
+    }
+    return true;
 }

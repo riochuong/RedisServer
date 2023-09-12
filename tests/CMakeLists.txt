@@ -62,4 +62,5 @@ message("catch2 Libraries ${Catch2_INCLUDE_DIRS}")
 
 
 add_test(test_resp_protocol test_command_parser)
-add_test(test_resp_protocol test_server)
+add_test(test_server test_server)
+add_test(test_kv_db test_kv_db)

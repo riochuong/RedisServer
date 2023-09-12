@@ -4,14 +4,18 @@
 #include <string>
 #include <ctime>
 #include <memory>
+#include <stdexcept>
 #include <vector>
 
 namespace RedisServer{
-    enum ValueType
+    enum class ValueType
     {
         STRING = 1,
         LIST = 2
     };
+
+    std::string ToStringType(ValueType& t);
+  
 
     typedef struct _val
     {
@@ -65,7 +69,9 @@ namespace RedisServer{
         */
         std::vector<std::string> RRange(const std::string& key, const std::vector<std::string>& values, DatabseErrCode& ec);
 
-        bool Exists(const std::string& key, DatabseErrCode& ec);
+        bool Exists(const std::string& key);
+
+        bool DeleteKey(const std::string& key);
 
         uint64_t GetNumberOfKeys(void);
 
