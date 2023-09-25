@@ -9,7 +9,10 @@ namespace RedisServer {
     enum class CmdHandlerErr{
         Ok,
         InvalidFormat,
-        InvalidCommandSize
+        InvalidCommandSize,
+        InvalidTimeStampFormat,
+        ExpiryTimeIsInThePast,
+        UnsupportedCommand
     };
 
     enum class CommandType {
@@ -37,23 +40,21 @@ namespace RedisServer {
         {CommandType::UNKNOWN, "UNKNOWN"},
     };
 
-    class CommandHandler {
-         public: 
-            virtual void ProcessCmd(std::vector<std::string>& cmd, CmdHandlerErr& ec, std::string& out);
-            
-            CommandHandler(CommandType t): type_(t){}; 
-            
-            CommandType getType(void){return type_;}
-            
-            std::string getStrType(){
-                if (gToCommandStr.find(type_) != gToCommandStr.end()){
-                    return gToCommandStr.at(type_);
-                }
-                return gToCommandStr.at(CommandType::UNKNOWN);
-            }
-         private:
-            CommandType type_;
+    static const std::unordered_map<std::string, CommandType> gToCommandType {
+        {"SET", CommandType::SET},
+        {"PING", CommandType::PING},
+        {"ECHO", CommandType::ECHO_CMD},
+        {"GET", CommandType::GET},
+        {"LPUSH", CommandType::LPUSH},
+        {"RPUSH", CommandType::RPUSH},
+        {"EXIST", CommandType::EXIST},
+        {"DELETE", CommandType::DELETE},
+        {"UNKNOWN", CommandType::UNKNOWN},
+    };
 
+    class CommandHandler {
+        public: 
+            virtual void ProcessCmd(std::vector<std::string>& cmd, CmdHandlerErr& ec, std::string& out);
     };
 
    

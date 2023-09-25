@@ -10,6 +10,8 @@
 #include "logging.h"
 #include "resp_protocol/command_parser.h"
 #include "utils.h"
+#include "command_handler.h"
+#include "db_handler.h"
 
 using asio::ip::tcp;
 using namespace std::string_literals;
@@ -73,7 +75,13 @@ namespace RedisServer{
     template<typename TCPSocket, typename AsyncLib>
     class Connection {
         public:
-            Connection(asio::thread_pool& exec, size_t buff_size): socket_(exec){
+            Connection(asio::thread_pool& exec, asio::strand<asio::thread_pool::executor_type>>& strand, KeyValueDatabase& db, size_t buff_size): 
+                thread_pool_ptr(&exec),
+                strand_(&strand),
+                db_ptr_(&db)
+            {
+                socket_ptr_ = std::make_shared<TCPSocket>(exec);
+                
             }
            void HandleConnection(){
                 // read command from client
@@ -105,7 +113,54 @@ namespace RedisServer{
                     return;
                 }
 
-                bool handleAllComands = false;
+                // handle command asynchronously
+                
+                CommandType type = CommandType::UNKNOWN;
+                if (gToCommandType.find(commands[0]) != gToCommandType.end()){
+                    type = gToCommandType.at(commands[0]);
+                }
+                std::shared_ptr<CommandHandler> handler = nullptr;
+                switch(type){
+                    case  CommandType::GET:
+                    case  CommandType::EXIST:
+                    case  CommandType::SET:
+                    case  CommandType::LPUSH:
+                    case  CommandType::RPUSH:
+                        handler = std::make_shared<DBHandler>(db_ptr);
+                        break;
+                }
+
+                // if we have a valid handler, post it on the strand to serialize acces to DB
+                // TODO: Optimize for case that does not need to access DB like PING/ECHO (minor)
+                if (handler){
+                    asio::post(
+                        *strand_,
+                        [=](){
+                            std::string out;
+                            CmdHandlerErr ec = CmdHandlerErr::Ok;
+                            handler->ProcessCmd(commands, ec, out);
+                            if (ec == CmdHandlerErr::Ok){
+                                asio::post(
+                                    *thread_pool_ptr,
+                                    [=](){
+                                        asio::error_code ec {};
+                                        asio::mutable_buffers_1 msg_buffer = asio::buffer(out);
+                                        std::size_t byte_transferred = AsyncLib::write(*socket_ptr_, msg_buffer, ec);
+                                        assert(byte_transferred == out.size());
+                                        if (ec) {
+                                            logger::error("Failed to send reply to client {}", ec.message());
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    )
+
+                }
+
+
+
+/*              bool handleAllComands = false;
                 size_t currIdx = 0;
                 while (!handleAllComands)
                 {
@@ -139,13 +194,17 @@ namespace RedisServer{
                         logger::info("All commands are handled properly !");
                     }
                 }
+ */            
             };
-            TCPSocket &GetSocket() {
-                return socket_;
+            std::shared_ptr<TCPSocket> GetSocket() {
+                return socket_ptr_;
             }
         private:
-            TCPSocket socket_;
+            std::shared_ptr<TCPSocket> socket_ptr_;
             asio::streambuf recv_;
+            std::shared_ptr<asio::thread_pool> thread_pool_ptr;
+            std::shared_ptr<KeyValueDatabase> db_ptr_;
+            std::shared_ptr<asio::strand<asio::thread_pool::executor_type>> strand_; // we need strand to serialize access to shared KV database
             const std::string PONG_MSG {"*1\r\n$4\r\nPONG\r\n"s};
             asio::const_buffers_1 PONG_MSG_BUFFER = asio::buffer(PONG_MSG);
             
@@ -239,7 +298,7 @@ namespace RedisServer{
                                                                      acceptor_(ioc_, tcp::endpoint(tcp::v4(), port_)),
                                                                      pool_(num_thread_workers),
                                                                      continuous_mode_(cont),
-                                                                     strand_(pool_.get_executor()),
+                                                                     strand_ptr_(std::make_shared<>(pool_.get_executor())),
                                                                      buff_size_(buff_size)
                                                                      {};
 
@@ -275,7 +334,7 @@ namespace RedisServer{
             asio::io_context ioc_;
             TCPAcceptor acceptor_;
             asio::thread_pool pool_;
-            asio::strand<asio::thread_pool::executor_type> strand_; // we need strand to serialize access to shared KV database
+            std::shared_ptr<asio::strand<asio::thread_pool::executor_type>> strand_ptr_; // we need strand to serialize access to shared KV database
             size_t buff_size_;
             // support testing
             bool running_ {false};
@@ -305,7 +364,7 @@ namespace RedisServer{
                 logger::info("Accepting new connection !");
                 auto conn = std::make_shared<Connection<TCPSocket, AsyncLib> >(this->pool_, buff_size_);
                 acceptor_.async_accept(
-                    conn->GetSocket(),
+                    *conn->GetSocket(),
                     [conn, this](const asio::error_code &error)
                     {   
                         logger::info("Start Handle Socket !"); 

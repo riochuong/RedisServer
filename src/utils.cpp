@@ -18,6 +18,24 @@ bool ToSizeTFromStr(const std::string& str, size_t* val){
     return true;
 }
 
+bool ToUint64tFromStr(const std::string& str, uint64_t* val){
+ try{
+        if (!val){
+            throw std::runtime_error("val must be a valid pointer that store convert value");
+        }        
+        *val = std::stoull(str);
+    } catch(std::invalid_argument const& ex){
+        logger::error("Failed to convert to size_t. raw str {}. Ex {}", str, ex.what());
+        return false;
+    } catch (std::out_of_range const& ex) {
+        logger::error("Input out of range size_t. raw str {}. Ex {}", str, ex.what());
+        return false; 
+    }
+    return true;
+}
+
+
+
 bool ExecCmdWithOutput(std::string &cmd, std::string &output){
     const size_t BUFF_SIZE = 1024;
     char buff [BUFF_SIZE] = {0};

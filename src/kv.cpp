@@ -18,8 +18,6 @@ std::string RedisServer::ToStringType(ValueType& t){
       }
 }
 
-
-
 void KeyValueDatabase::Get(const std::string& key, std::string &value, DatabseErrCode& ec) {
     auto value_it = this->db_.find(key);
     if (value_it == this->db_.end()){
